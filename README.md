@@ -1,5 +1,3 @@
-Certainly! Here's a README file for your Terraform configuration:
-
 ---
 
 # AWS Infrastructure Deployment with Terraform
