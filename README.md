@@ -110,5 +110,3 @@ Enter `yes` when prompted to confirm destruction.
 - For production use, consider adding more security measures and configuring other AWS resources like security groups, S3 buckets, etc.
 
 ---
-
-This README provides an overview of the infrastructure created by your Terraform script, setup instructions, and guidelines for further customization or cleanup. Adjust as necessary based on your specific deployment needs and AWS environment.
