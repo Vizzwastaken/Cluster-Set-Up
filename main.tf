@@ -118,9 +118,10 @@ resource "aws_nat_gateway" "nat" {
   depends_on = [aws_internet_gateway.igw]
 }
 
-resource "aws_iam_role" "eks_cluster_role" {
-  name               = "eks-cluster-role"
-  assume_role_policy = <<EOF
+resource "aws_iam_role" "cluster-role" {
+  name = "cluster-role"
+
+  assume_role_policy = <<POLICY
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -133,38 +134,17 @@ resource "aws_iam_role" "eks_cluster_role" {
     }
   ]
 }
-EOF
+POLICY
 }
 
-resource "aws_iam_role_policy_attachment" "eks_cluster_policy_attachment" {
-  role       = aws_iam_role.eks_cluster_role.name
+resource "aws_iam_role_policy_attachment" "demo-AmazonEKSClusterPolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  role       = aws_iam_role.cluster-role.name
 }
-
-resource "aws_iam_role_policy_attachment" "eks_service_policy_attachment" {
-  role       = aws_iam_role.eks_cluster_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_cni_policy_attachment" {
-  role       = aws_iam_role.eks_cluster_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-}
-
-resource "aws_iam_role_policy_attachment" "ecr_readonly_policy_attachment" {
-  role       = aws_iam_role.eks_cluster_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_worker_node_policy_attachment" {
-  role       = aws_iam_role.eks_cluster_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-}
-
 
 resource "aws_eks_cluster" "demo" {
   name     = "demo"
-  role_arn = aws_iam_role.eks_cluster_role.arn
+  role_arn = aws_iam_role.cluster-role.arn
 
   vpc_config {
     subnet_ids = [
@@ -172,58 +152,73 @@ resource "aws_eks_cluster" "demo" {
       aws_subnet.Private-1b.id
     ]
   }
-
 }
 
-resource "aws_iam_role" "eks_node_group_role" {
-  name = "eks-node-group-role"
+resource "aws_iam_role" "nodes" {
+  name = "eks-node-group-nodes"
 
   assume_role_policy = jsonencode({
-    "Version"   : "2012-10-17",
-    "Statement" : [{
-      "Effect"    : "Allow",
-      "Principal" : {
-        "Service" : "ec2.amazonaws.com"
-      },
-      "Action"    : "sts:AssumeRole"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
     }]
+    Version = "2012-10-17"
   })
 }
 
-resource "aws_iam_role_policy_attachment" "eks_cni_policy_attachment" {
-  role       = aws_iam_role.eks_node_group_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-}
-
-resource "aws_iam_role_policy_attachment" "ecr_readonly_policy_attachment" {
-  role       = aws_iam_role.eks_node_group_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_worker_node_policy_attachment" {
-  role       = aws_iam_role.eks_node_group_role.name
+resource "aws_iam_role_policy_attachment" "nodes-AmazonEKSWorkerNodePolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.nodes.name
 }
 
-resource "aws_eks_node_group" "worker_nodes" {
+resource "aws_iam_role_policy_attachment" "nodes-AmazonEKS_CNI_Policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.nodes.name
+}
+
+resource "aws_iam_role_policy_attachment" "nodes-AmazonEC2ContainerRegistryReadOnly" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.nodes.name
+}
+
+resource "aws_eks_node_group" "private-nodes" {
   cluster_name    = aws_eks_cluster.demo.name
-  node_group_name = "demo-nodes"
-  node_role_arn   = aws_iam_role.eks_node_group_role.arn
+  node_group_name = "private-nodes"
+  node_role_arn   = aws_iam_role.nodes.arn
 
   subnet_ids = [
-    aws_subnet.Private-1a.id,
-    aws_subnet.Private-1b.id
-  ]
+      aws_subnet.Private-1a.id,
+      aws_subnet.Private-1b.id
+    ]
+
+  capacity_type  = "ON_DEMAND"
+  instance_types = ["t3.small"]
 
   scaling_config {
-    desired_size = 2
-    max_size     = 3
+    desired_size = 1
+    max_size     = 2
     min_size     = 1
   }
 
+  update_config {
+    max_unavailable = 1
+  }
+
+  labels = {
+    role = "general"
+  }
+
+
   depends_on = [
-    aws_iam_role_policy_attachment.eks_cni_policy_attachment,
-    aws_iam_role_policy_attachment.ecr_readonly_policy_attachment,
-    aws_iam_role_policy_attachment.eks_worker_node_policy_attachment
+    aws_iam_role_policy_attachment.nodes-AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.nodes-AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.nodes-AmazonEC2ContainerRegistryReadOnly,
   ]
 }
+
+
+
+
