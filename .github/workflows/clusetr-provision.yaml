@@ -19,6 +19,9 @@ jobs:
     steps:
     - uses: hashicorp/setup-terraform@v3
 
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
     - name: Validation
       run: terraform validate -json
     
@@ -27,6 +30,9 @@ jobs:
     needs: Install-Terraform
     steps:
     - uses: hashicorp/setup-terraform@v3
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
     - name: Terraform Init
       run: terraform init
