@@ -21,6 +21,9 @@ jobs:
 
     - name: Checkout repository
       uses: actions/checkout@v4
+    
+    - name: Terraform Init
+      run: terraform init
 
     - name: Validation
       run: terraform validate -json
