@@ -19,6 +19,7 @@ jobs:
     - uses: hashicorp/setup-terraform@v3
 
     - name: Terraform Init
+      if: ${{ github.event.inputs.action  == 'plan' }}
       run: terraform init
 
     - name: Validation
