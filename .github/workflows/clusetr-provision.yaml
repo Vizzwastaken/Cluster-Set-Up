@@ -1,0 +1,27 @@
+name: Create Cluster
+on:
+  workflow_dispatch:
+    inpusts:
+      actions:
+        type: choice
+        description: 'Plan, Apply or Destroy'
+        options:
+        - plan
+        - apply
+        - destroy
+        required: true
+        default: 'plan'
+
+jobs:
+  Install-Terraform:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: hashicorp/setup-terraform@v3
+
+    steps:
+    - name: Terraform Init
+      run: terraform intit
+    
+    steps:
+    - name: Validation
+      run: terraform validate -json
