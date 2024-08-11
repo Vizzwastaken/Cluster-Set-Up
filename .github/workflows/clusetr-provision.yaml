@@ -1,7 +1,8 @@
 name: Create Cluster
+
 on:
   workflow_dispatch:
-    inpusts:
+    inputs:
       actions:
         type: choice
         description: 'Plan, Apply or Destroy'
